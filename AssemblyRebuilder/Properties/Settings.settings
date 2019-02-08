@@ -17,7 +17,7 @@
     <Setting Name="ILAsmOptions" Type="System.String" Scope="Application">
       <Value Profile="(Default)"> /nologo /quiet /optimize /fold</Value>
     </Setting>
-    <Setting Name="ILAsmOptions64" Type="System.String" Scope="User">
+    <Setting Name="ILAsmOptions64" Type="System.String" Scope="Application">
       <Value Profile="(Default)"> /nologo /quiet /optimize /fold /pe64 x64</Value>
     </Setting>
   </Settings>

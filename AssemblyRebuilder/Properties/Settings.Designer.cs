@@ -69,15 +69,12 @@ namespace AssemblyRebuilder.Properties {
             }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute(" /nologo /quiet /optimize /fold /pe64 x64")]
         public string ILAsmOptions64 {
             get {
                 return ((string)(this["ILAsmOptions64"]));
-            }
-            set {
-                this["ILAsmOptions64"] = value;
             }
         }
     }
