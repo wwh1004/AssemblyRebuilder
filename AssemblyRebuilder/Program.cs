@@ -53,11 +53,11 @@ namespace AssemblyRebuilder {
 			Console.WriteLine();
 			isClr4x = clrVersion.StartsWith("v4");
 			ilPath = Path.ChangeExtension(assemblyPath, ".il");
-			CallProcess(Settings.Default.ILDasmPath, string.Format("\"{0}\" /out={1} {2}", assemblyPath, ilPath, Settings.Default.ILDasmOptions));
+			CallProcess(Settings.Default.ILDasmPath, string.Format("\"{0}\" /out=\"{1}\" {2}", assemblyPath, ilPath, Settings.Default.ILDasmOptions));
 			resourcePath = Path.ChangeExtension(assemblyPath, ".res");
 			newAssemblyPath = PathInsertPostfix(assemblyPath, ".rb");
 			buffer = new StringBuilder();
-			buffer.Append(ilPath);
+			buffer.AppendFormat("\"{0}\"", ilPath);
 			buffer.Append(assemblyPath.EndsWith(".exe") ? " /exe" : " /dll");
 			buffer.AppendFormat(" /output=\"{0}\"", newAssemblyPath);
 			if (File.Exists(resourcePath))
@@ -65,7 +65,7 @@ namespace AssemblyRebuilder {
 			buffer.Append(is64Bit ? Settings.Default.ILAsmOptions64 : Settings.Default.ILAsmOptions);
 			CallProcess(isClr4x ? Settings.Default.ILAsm4xPath : Settings.Default.ILAsm2xPath, buffer.ToString());
 			Console.WriteLine("Saving: " + newAssemblyPath);
-			Console.ReadKey();
+			Console.ReadKey(true);
 		}
 
 		private static void ReadAssemblyInfo(string assemblyPath, out bool isAssembly, out string clrVersion, out bool is64Bit) {
