@@ -1,0 +1,24 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="AssemblyRebuilder.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="ILDasmPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.7.2 Tools\ildasm.exe</Value>
+    </Setting>
+    <Setting Name="ILDasmOptions" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ILAsm2xPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Windows\Microsoft.NET\Framework\v2.0.50727\ilasm.exe</Value>
+    </Setting>
+    <Setting Name="ILAsm4xPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Windows\Microsoft.NET\Framework\v4.0.30319\ilasm.exe</Value>
+    </Setting>
+    <Setting Name="ILAsmOptions" Type="System.String" Scope="Application">
+      <Value Profile="(Default)"> /nologo /quiet /optimize /fold</Value>
+    </Setting>
+    <Setting Name="ILAsmOptions64" Type="System.String" Scope="User">
+      <Value Profile="(Default)"> /nologo /quiet /optimize /fold /pe64 x64</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
