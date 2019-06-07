@@ -27,44 +27,54 @@ namespace AssemblyRebuilder {
 			if (args == null || args.Length != 1)
 				return;
 
-			string assemblyPath;
+			string originalAssemblyPath;
 			bool isAssembly;
 			string clrVersion;
 			bool is64Bit;
 			bool isClr4x;
+			string assemblyName;
+			string assemblyPath;
 			string ilPath;
 			string resourcePath;
-			string newAssemblyPath;
+			string rebuiltAssemblyPath;
 			StringBuilder buffer;
 
 			Console.Title = ConsoleTitleUtils.GetTitle();
-			assemblyPath = Path.GetFullPath(args[0]);
-			if (!File.Exists(assemblyPath)) {
+			originalAssemblyPath = Path.GetFullPath(args[0]);
+			if (!File.Exists(originalAssemblyPath)) {
 				Console.WriteLine("File doesn't exist.");
 				return;
 			}
-			ReadAssemblyInfo(assemblyPath, out isAssembly, out clrVersion, out is64Bit);
+			ReadAssemblyInfo(originalAssemblyPath, out isAssembly, out clrVersion, out is64Bit);
 			if (!isAssembly) {
 				Console.WriteLine("File isn't a valid .NET assembly.");
 				return;
 			}
+			assemblyName = Path.GetFileName(originalAssemblyPath);
+			assemblyPath = Path.Combine(Path.GetDirectoryName(originalAssemblyPath), assemblyName + "_il", assemblyName);
+			Directory.CreateDirectory(Path.GetDirectoryName(assemblyPath));
+			File.Copy(originalAssemblyPath, assemblyPath, true);
 			Console.WriteLine("ClrVersion: " + clrVersion);
 			Console.WriteLine("Is64Bit: " + is64Bit.ToString());
 			Console.WriteLine();
 			isClr4x = clrVersion.StartsWith("v4");
 			ilPath = Path.ChangeExtension(assemblyPath, ".il");
+			Console.WriteLine("Disassembling...");
 			CallProcess(Settings.Default.ILDasmPath, string.Format("\"{0}\" /out=\"{1}\" {2}", assemblyPath, ilPath, Settings.Default.ILDasmOptions));
+			File.WriteAllText(ilPath, File.ReadAllText(ilPath, Encoding.Default), new UTF8Encoding(true));
 			resourcePath = Path.ChangeExtension(assemblyPath, ".res");
-			newAssemblyPath = PathInsertPostfix(assemblyPath, ".rb");
+			rebuiltAssemblyPath = PathInsertPostfix(assemblyPath, ".rb");
 			buffer = new StringBuilder();
 			buffer.AppendFormat("\"{0}\"", ilPath);
 			buffer.Append(assemblyPath.EndsWith(".exe") ? " /exe" : " /dll");
-			buffer.AppendFormat(" /output=\"{0}\"", newAssemblyPath);
+			buffer.AppendFormat(" /output=\"{0}\"", rebuiltAssemblyPath);
 			if (File.Exists(resourcePath))
 				buffer.AppendFormat(" /resource=\"{0}\"", resourcePath);
 			buffer.Append(is64Bit ? Settings.Default.ILAsmOptions64 : Settings.Default.ILAsmOptions);
+			Console.WriteLine("Saving: " + rebuiltAssemblyPath);
 			CallProcess(isClr4x ? Settings.Default.ILAsm4xPath : Settings.Default.ILAsm2xPath, buffer.ToString());
-			Console.WriteLine("Saving: " + newAssemblyPath);
+			File.Copy(rebuiltAssemblyPath, Path.Combine(Path.GetDirectoryName(originalAssemblyPath), Path.GetFileName(rebuiltAssemblyPath)), true);
+			Console.WriteLine("Finished.");
 			Console.ReadKey(true);
 		}
 
@@ -156,9 +166,8 @@ namespace AssemblyRebuilder {
 					UseShellExecute = false
 				}
 			};
-			Console.WriteLine("Calling process:");
-			Console.WriteLine("path=" + filePath);
-			Console.WriteLine("arg=" + arguments);
+			Console.WriteLine();
+			Console.WriteLine(filePath + " " + arguments);
 			Console.WriteLine();
 			process.Start();
 			process.WaitForExit();
