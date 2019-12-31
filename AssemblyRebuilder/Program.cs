@@ -162,12 +162,12 @@ namespace AssemblyRebuilder {
 
 			process = new Process() {
 				StartInfo = new ProcessStartInfo(filePath, arguments) {
-					CreateNoWindow = true,
+					CreateNoWindow = false,
 					UseShellExecute = false
 				}
 			};
 			Console.WriteLine();
-			Console.WriteLine(filePath + " " + arguments);
+			Console.WriteLine($"\"{filePath}\" {arguments}");
 			Console.WriteLine();
 			process.Start();
 			process.WaitForExit();
