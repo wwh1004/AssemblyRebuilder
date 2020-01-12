@@ -158,19 +158,18 @@ namespace AssemblyRebuilder {
 		}
 
 		private static void CallProcess(string filePath, string arguments) {
-			Process process;
-
-			process = new Process() {
+			Console.WriteLine();
+			Console.WriteLine($"\"{filePath}\" {arguments}");
+			Console.WriteLine();
+			using (Process process = new Process() {
 				StartInfo = new ProcessStartInfo(filePath, arguments) {
 					CreateNoWindow = false,
 					UseShellExecute = false
 				}
-			};
-			Console.WriteLine();
-			Console.WriteLine($"\"{filePath}\" {arguments}");
-			Console.WriteLine();
-			process.Start();
-			process.WaitForExit();
+			}) {
+				process.Start();
+				process.WaitForExit();
+			}
 		}
 
 		private static string PathInsertPostfix(string path, string postfix) {
