@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using AssemblyRebuilder.Properties;
 
@@ -27,44 +28,32 @@ namespace AssemblyRebuilder {
 			if (args == null || args.Length != 1)
 				return;
 
-			string originalAssemblyPath;
-			bool isAssembly;
-			string clrVersion;
-			bool is64Bit;
-			bool isClr4x;
-			string assemblyName;
-			string assemblyPath;
-			string ilPath;
-			string resourcePath;
-			string rebuiltAssemblyPath;
-			StringBuilder buffer;
-
-			Console.Title = ConsoleTitleUtils.GetTitle();
-			originalAssemblyPath = Path.GetFullPath(args[0]);
+			Console.Title = GetTitle();
+			string originalAssemblyPath = Path.GetFullPath(args[0]);
 			if (!File.Exists(originalAssemblyPath)) {
 				Console.WriteLine("File doesn't exist.");
 				return;
 			}
-			ReadAssemblyInfo(originalAssemblyPath, out isAssembly, out clrVersion, out is64Bit);
+			ReadAssemblyInfo(originalAssemblyPath, out bool isAssembly, out string clrVersion, out bool is64Bit);
 			if (!isAssembly) {
 				Console.WriteLine("File isn't a valid .NET assembly.");
 				return;
 			}
-			assemblyName = Path.GetFileName(originalAssemblyPath);
-			assemblyPath = Path.Combine(Path.GetDirectoryName(originalAssemblyPath), assemblyName + "_il", assemblyName);
+			string assemblyName = Path.GetFileName(originalAssemblyPath);
+			string assemblyPath = Path.Combine(Path.GetDirectoryName(originalAssemblyPath), assemblyName + "_il", assemblyName);
 			Directory.CreateDirectory(Path.GetDirectoryName(assemblyPath));
 			File.Copy(originalAssemblyPath, assemblyPath, true);
 			Console.WriteLine("ClrVersion: " + clrVersion);
 			Console.WriteLine("Is64Bit: " + is64Bit.ToString());
 			Console.WriteLine();
-			isClr4x = clrVersion.StartsWith("v4");
-			ilPath = Path.ChangeExtension(assemblyPath, ".il");
+			bool isClr4x = clrVersion.StartsWith("v4");
+			string ilPath = Path.ChangeExtension(assemblyPath, ".il");
 			Console.WriteLine("Disassembling...");
 			CallProcess(Settings.Default.ILDasmPath, string.Format("\"{0}\" /out=\"{1}\" {2}", assemblyPath, ilPath, Settings.Default.ILDasmOptions));
-			File.WriteAllText(ilPath, File.ReadAllText(ilPath, Encoding.Default), new UTF8Encoding(true));
-			resourcePath = Path.ChangeExtension(assemblyPath, ".res");
-			rebuiltAssemblyPath = PathInsertPostfix(assemblyPath, ".rb");
-			buffer = new StringBuilder();
+			ConvertEncoding(ilPath);
+			string resourcePath = Path.ChangeExtension(assemblyPath, ".res");
+			string rebuiltAssemblyPath = PathInsertPostfix(assemblyPath, ".rb");
+			var buffer = new StringBuilder();
 			buffer.AppendFormat("\"{0}\"", ilPath);
 			buffer.Append(assemblyPath.EndsWith(".exe") ? " /exe" : " /dll");
 			buffer.AppendFormat(" /output=\"{0}\"", rebuiltAssemblyPath);
@@ -81,7 +70,7 @@ namespace AssemblyRebuilder {
 		private static void ReadAssemblyInfo(string assemblyPath, out bool isAssembly, out string clrVersion, out bool is64Bit) {
 			try {
 				isAssembly = true;
-				using (BinaryReader reader = new BinaryReader(new FileStream(assemblyPath, FileMode.Open, FileAccess.Read))) {
+				using (var reader = new BinaryReader(new FileStream(assemblyPath, FileMode.Open, FileAccess.Read))) {
 					clrVersion = ReadVersionString(reader);
 					ReadPEInfo(reader, out _, out is64Bit);
 				}
@@ -94,20 +83,14 @@ namespace AssemblyRebuilder {
 		}
 
 		private static string ReadVersionString(BinaryReader reader) {
-			uint peOffset;
-			bool is64Bit;
-			SectionHeader[] sectionHeaders;
-			uint rva;
-			SectionHeader sectionHeader;
-
-			ReadPEInfo(reader, out peOffset, out is64Bit);
+			ReadPEInfo(reader, out uint peOffset, out bool is64Bit);
 			reader.BaseStream.Position = peOffset + (is64Bit ? 0xF8 : 0xE8);
-			rva = reader.ReadUInt32();
+			uint rva = reader.ReadUInt32();
 			// .Net Metadata Directory RVA
 			if (rva == 0)
 				throw new BadImageFormatException("File isn't a valid .NET assembly.");
-			sectionHeaders = GetSectionHeaders(reader);
-			sectionHeader = GetSectionHeader(rva, sectionHeaders);
+			var sectionHeaders = GetSectionHeaders(reader);
+			var sectionHeader = GetSectionHeader(rva, sectionHeaders);
 			reader.BaseStream.Position = sectionHeader.RawAddress + rva - sectionHeader.VirtualAddress + 0x8;
 			// .Net Metadata Directory FileOffset
 			rva = reader.ReadUInt32();
@@ -121,27 +104,20 @@ namespace AssemblyRebuilder {
 		}
 
 		private static void ReadPEInfo(BinaryReader reader, out uint peOffset, out bool is64Bit) {
-			ushort machine;
-
 			reader.BaseStream.Position = 0x3C;
 			peOffset = reader.ReadUInt32();
 			reader.BaseStream.Position = peOffset + 0x4;
-			machine = reader.ReadUInt16();
+			ushort machine = reader.ReadUInt16();
 			if (machine != 0x14C && machine != 0x8664)
 				throw new BadImageFormatException("Invalid \"Machine\" in FileHeader.");
 			is64Bit = machine == 0x8664;
 		}
 
 		private static SectionHeader[] GetSectionHeaders(BinaryReader reader) {
-			uint ntHeaderOffset;
-			bool is64Bit;
-			ushort numberOfSections;
-			SectionHeader[] sectionHeaders;
-
-			ReadPEInfo(reader, out ntHeaderOffset, out is64Bit);
-			numberOfSections = reader.ReadUInt16();
+			ReadPEInfo(reader, out uint ntHeaderOffset, out bool is64Bit);
+			ushort numberOfSections = reader.ReadUInt16();
 			reader.BaseStream.Position = ntHeaderOffset + (is64Bit ? 0x108 : 0xF8);
-			sectionHeaders = new SectionHeader[numberOfSections];
+			var sectionHeaders = new SectionHeader[numberOfSections];
 			for (int i = 0; i < numberOfSections; i++) {
 				reader.BaseStream.Position += 0x8;
 				sectionHeaders[i] = new SectionHeader(reader.ReadUInt32(), reader.ReadUInt32(), reader.ReadUInt32(), reader.ReadUInt32());
@@ -151,9 +127,10 @@ namespace AssemblyRebuilder {
 		}
 
 		private static SectionHeader GetSectionHeader(uint rva, SectionHeader[] sectionHeaders) {
-			foreach (SectionHeader sectionHeader in sectionHeaders)
+			foreach (var sectionHeader in sectionHeaders) {
 				if (rva >= sectionHeader.VirtualAddress && rva < sectionHeader.VirtualAddress + Math.Max(sectionHeader.VirtualSize, sectionHeader.RawSize))
 					return sectionHeader;
+			}
 			throw new BadImageFormatException("Can't get section from specific RVA.");
 		}
 
@@ -161,7 +138,7 @@ namespace AssemblyRebuilder {
 			Console.WriteLine();
 			Console.WriteLine($"\"{filePath}\" {arguments}");
 			Console.WriteLine();
-			using (Process process = new Process() {
+			using (var process = new Process() {
 				StartInfo = new ProcessStartInfo(filePath, arguments) {
 					CreateNoWindow = false,
 					UseShellExecute = false
@@ -172,8 +149,28 @@ namespace AssemblyRebuilder {
 			}
 		}
 
+		private static void ConvertEncoding(string ilPath) {
+			File.WriteAllText(ilPath, File.ReadAllText(ilPath, Encoding.Default), new UTF8Encoding(true));
+			GC.Collect();
+			// 可能IL文件很大，回收一下内存
+		}
+
 		private static string PathInsertPostfix(string path, string postfix) {
 			return Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + postfix + Path.GetExtension(path));
+		}
+
+		private static string GetTitle() {
+			string productName = GetAssemblyAttribute<AssemblyProductAttribute>().Product;
+			string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+			string copyright = GetAssemblyAttribute<AssemblyCopyrightAttribute>().Copyright.Substring(12);
+			int firstBlankIndex = copyright.IndexOf(' ');
+			string copyrightOwnerName = copyright.Substring(firstBlankIndex + 1);
+			string copyrightYear = copyright.Substring(0, firstBlankIndex);
+			return $"{productName} v{version} by {copyrightOwnerName} {copyrightYear}";
+		}
+
+		private static T GetAssemblyAttribute<T>() {
+			return (T)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(T), false)[0];
 		}
 	}
 }
