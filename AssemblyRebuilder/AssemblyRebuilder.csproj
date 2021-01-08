@@ -8,6 +8,7 @@
 		<TargetFramework>net40</TargetFramework>
 		<OutputPath>..\bin\$(Configuration)</OutputPath>
 		<OutputType>Exe</OutputType>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Update="Properties\Settings.Designer.cs">
